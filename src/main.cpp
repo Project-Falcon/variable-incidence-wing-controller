@@ -14,7 +14,7 @@ AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
 
 void setup(void) 
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Orientation Sensor Test"); Serial.println("");
 
   stepper.setMaxSpeed(1000);  
@@ -37,10 +37,33 @@ void loop(void)
 {
   sensors_event_t event; 
   bno.getEvent(&event);
+  stepper.moveTo(event.orientation.y * 100);
+  /*
   Serial.print("Y: ");
-  Serial.println(event.orientation.y);
+  Serial.print(event.orientation.y);
+  Serial.print(" | distanceToGo: ");
+  Serial.print(stepper.distanceToGo());
+  Serial.print(" | targetPosition: ");
+  Serial.print(stepper.targetPosition());
+  Serial.print(" | currentPosition: ");
+  Serial.print(stepper.currentPosition());
+  Serial.print(" | speed: ");
+  Serial.print(stepper.speed());
+  Serial.println();
+  */
 
-  stepper.moveTo(event.orientation.y);
-  stepper.runToPosition(); // this function is blocking, worth considering 
-  delay(500);
+  Serial.println(stepper.distanceToGo());
+
+  
+  
+  
+  if (abs(stepper.distanceToGo()) > 100) {
+    for (int i = 0; i <= 100; i++) {
+      stepper.run();
+    }
+    Serial.println("Stepping");
+  }
+
+  //stepper.moveTo(8000000);
+  //stepper.runToPosition();
 }

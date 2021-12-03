@@ -40,13 +40,20 @@ sensors_event_t event;
 
 void loop(void)
 {
-  if (counter % 500 == 0)
+  if (counter % 5000 == 0)
   {
     bno.getEvent(&event);
-    Serial.println(stepper.distanceToGo());
-    stepper.moveTo(event.orientation.y * 100);
+    Serial.print("currentPosition: ");
+    Serial.print(stepper.currentPosition());
+    Serial.print(" | y: ");
+    Serial.print(event.orientation.y);
+    Serial.print(" | distanceToGo: ");
+    Serial.print(stepper.distanceToGo());
+    Serial.println();
+    stepper.moveTo(event.orientation.y * 55.6);
   }
-  if (abs(stepper.distanceToGo()) > 150)
+  
+  if (abs(stepper.distanceToGo()) > 60)
   {
     stepper.run();
   }

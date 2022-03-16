@@ -11,6 +11,7 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55);
 #define motorInterfaceType 1
 
 AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
+// AccelStepper stepper = AccelStepper(AccelStepper::DRIVER, stepPin, dirPin) maybe?
 
 void setup(void)
 {
@@ -20,6 +21,7 @@ void setup(void)
 
   stepper.setMaxSpeed(1000);
   stepper.setAcceleration(5000);
+  // add setMinPulseWidth()?
 
   /* Initialise the sensor */
   if (!bno.begin())
@@ -36,26 +38,36 @@ void setup(void)
 }
 
 int counter = 0;
+//int setPoint = -15; //  units to be calibrated
+int targetPos = 0;
 sensors_event_t event;
+
 
 void loop(void)
 {
-  if (counter % 5000 == 0)
+  if (counter % 500 == 0)
   {
     bno.getEvent(&event);
+    //targetPos = -(event.orientation.y - setPoint);
+    targetPos = -(event.orientation.y);
+    //  units to be calibrated
+    // Negative feedback law used to remove offset from the setpoint
+    stepper.moveTo(targetPos*100);
     Serial.print("currentPosition: ");
     Serial.print(stepper.currentPosition());
-    Serial.print(" | y: ");
-    Serial.print(event.orientation.y);
+    Serial.print(" | Target Position ");
+    Serial.print(targetPos);
     Serial.print(" | distanceToGo: ");
     Serial.print(stepper.distanceToGo());
     Serial.println();
-    stepper.moveTo(event.orientation.y * 55.6);
   }
-  
+
   if (abs(stepper.distanceToGo()) > 60)
   {
     stepper.run();
+    // try runToNewPosition()
+    // or runToPosition()
+    // runSpeed()
   }
   ++counter;
 }

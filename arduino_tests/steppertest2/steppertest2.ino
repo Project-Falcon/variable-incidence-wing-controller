@@ -1,70 +1,73 @@
-/* Example sketch to control a stepper motor with TB6600 stepper motor driver and Arduino without a library: number of revolutions, speed and direction. More info: https://www.makerguides.com */
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
+#include <AccelStepper.h>
 
-// Define stepper motor connections and steps per revolution:
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
+
 #define dirPin 2
 #define stepPin 3
-#define stepsPerRevolution 1600
+#define motorInterfaceType 1
 
-void setup() {
-  // Declare pins as output:
-  pinMode(stepPin, OUTPUT);
-  pinMode(dirPin, OUTPUT);
+AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
+// AccelStepper stepper = AccelStepper(AccelStepper::DRIVER, stepPin, dirPin) maybe?
+
+void setup(void)
+{
+  Serial.begin(115200);
+  Serial.println("Orientation Sensor Test");
+  Serial.println("");
+
+  stepper.setMaxSpeed(1000);
+  stepper.setAcceleration(5000);
+  // add setMinPulseWidth()?
+
+  /* Initialise the sensor */
+  if (!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while (1)
+      ;
+  }
+
+  delay(1000);
+
+  bno.setExtCrystalUse(true);
 }
 
-void loop() {
-  // Set the spinning direction clockwise:
-  digitalWrite(dirPin, HIGH);
+int counter = 0;
+int setPoint = -15; //  units to be calibrated
+int targetPos = 0;
+sensors_event_t event;
 
-  // Spin the stepper motor 1 revolution slowly:
-  for (int i = 0; i < stepsPerRevolution; i++) {
-    // These four lines result in 1 step:
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(2000);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(2000);
+
+void loop(void)
+{
+  if (counter % 500 == 0)
+  {
+    bno.getEvent(&event);
+    targetPos = -(event.orientation.y - setPoint);
+    // targetPos = -(event.orientation.y);
+    //  units to be calibrated
+    // Negative feedback law used to remove offset from the setpoint
+    stepper.moveTo(targetPos*100);
+    Serial.print("currentPosition: ");
+    Serial.print(stepper.currentPosition());
+    Serial.print(" | Target Position ");
+    Serial.print(targetPos);
+    Serial.print(" | distanceToGo: ");
+    Serial.print(stepper.distanceToGo());
+    Serial.println();
   }
 
-  delay(1000);
-
-  // Set the spinning direction counterclockwise:
-  digitalWrite(dirPin, LOW);
-
-  // Spin the stepper motor 1 revolution quickly:
-  for (int i = 0; i < stepsPerRevolution; i++) {
-    // These four lines result in 1 step:
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(1000);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(1000);
+  if (abs(stepper.distanceToGo()) > 60)
+  {
+    stepper.run();
+    // try runToNewPosition()
+    // or runToPosition()
+    // runSpeed()
   }
-
-  delay(1000);
-
-  // Set the spinning direction clockwise:
-  digitalWrite(dirPin, HIGH);
-
-  // Spin the stepper motor 5 revolutions fast:
-  for (int i = 0; i < 5 * stepsPerRevolution; i++) {
-    // These four lines result in 1 step:
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(500);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(500);
-  }
-
-  delay(1000);
-
-  // Set the spinning direction counterclockwise:
-  digitalWrite(dirPin, LOW);
-
-  // Spin the stepper motor 5 revolutions fast:
-  for (int i = 0; i < 5 * stepsPerRevolution; i++) {
-    // These four lines result in 1 step:
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(500);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(500);
-  }
-
-  delay(1000);
+  ++counter;
 }
